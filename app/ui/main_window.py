@@ -1,13 +1,14 @@
 """Main window shell: left sidebar + QStackedWidget content area + status bar.
 
-Module views are *not* imported here; they will be lazy-loaded in later phases
-when the user clicks a sidebar button. For now each button shows a placeholder
-"Coming in Phase N" panel.
+Module views are lazy-loaded the first time the user opens them — none of the
+view modules are imported at app start, so PySide6 / repository / service
+imports stay minimal until needed.
 """
 
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from PySide6.QtCore import Qt
@@ -48,6 +49,14 @@ _MODULES: tuple[_Module, ...] = (
     _Module("reports", "Reports", 7),
     _Module("settings", "Settings", 8),
 )
+
+
+def _build_students_view(conn: sqlite3.Connection) -> QWidget:
+    # Imported lazily so the students module (and pyqtgraph etc. in later
+    # phases) only load when the user opens the view.
+    from app.ui.views.students.list_view import StudentsListView
+
+    return StudentsListView(conn)
 
 
 def _placeholder(text: str) -> QWidget:
@@ -106,23 +115,42 @@ class MainWindow(QMainWindow):
         sep.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(sep)
 
-        # Content stack
+        # Content stack — populated lazily.
         self.stack = QStackedWidget()
-        self._page_for_index: dict[int, QWidget] = {}
+        self._loaded: dict[int, QWidget] = {}
+        # Each module gets a placeholder *now*; the real view is built the
+        # first time the sidebar entry is selected. Keeps cold start fast.
+        self._builders: dict[int, Callable[[sqlite3.Connection], QWidget]] = {
+            1: _build_students_view,
+        }
         for i, module in enumerate(_MODULES):
             if module.phase == 1:
                 page = _placeholder(
                     f"Welcome, {self._user.full_name or self._user.username}.\n\n"
                     "Use the sidebar to open a module."
                 )
+                self._loaded[i] = page
             else:
                 page = _placeholder(f"{module.label} — coming in Phase {module.phase}.")
             self.stack.addWidget(page)
-            self._page_for_index[i] = page
         layout.addWidget(self.stack, 1)
 
-        self.sidebar.currentRowChanged.connect(self.stack.setCurrentIndex)
+        self.sidebar.currentRowChanged.connect(self._on_sidebar_changed)
         self.sidebar.setCurrentRow(0)
+
+    # ------------------------------------------------------------------
+    def _on_sidebar_changed(self, index: int) -> None:
+        if index < 0:
+            return
+        # Lazy-instantiate on first visit.
+        if index not in self._loaded and index in self._builders:
+            real_page = self._builders[index](self._conn)
+            placeholder = self.stack.widget(index)
+            self.stack.removeWidget(placeholder)
+            placeholder.deleteLater()
+            self.stack.insertWidget(index, real_page)
+            self._loaded[index] = real_page
+        self.stack.setCurrentIndex(index)
 
     # ------------------------------------------------------------------
     def _build_status_bar(self) -> None:
