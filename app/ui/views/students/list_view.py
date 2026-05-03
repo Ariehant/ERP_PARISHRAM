@@ -111,10 +111,10 @@ class StudentsListView(QWidget):
         layout.addWidget(QLabel("Status:"))
         layout.addWidget(self.status_combo)
 
-        # Phase 3 will populate the class filter; keep a placeholder so layout is stable.
         self.class_combo = QComboBox()
         self.class_combo.addItem("All classes", None)
-        self.class_combo.setEnabled(False)
+        self._populate_class_combo()
+        self.class_combo.currentIndexChanged.connect(self._on_filter_changed)
         layout.addWidget(QLabel("Class:"))
         layout.addWidget(self.class_combo)
 
@@ -174,7 +174,26 @@ class StudentsListView(QWidget):
         )
 
     def refresh(self) -> None:
+        self._populate_class_combo()
         self._model.refresh()
+
+    def _populate_class_combo(self) -> None:
+        """Fill the class filter from classes in the active academic year."""
+        from app.repositories import class_repo, school_repo
+
+        active = school_repo.get_active_academic_year(self._conn)
+        previous = self.class_combo.currentData()
+        self.class_combo.blockSignals(True)
+        self.class_combo.clear()
+        self.class_combo.addItem("All classes", None)
+        if active is not None and active.id is not None:
+            for cls in class_repo.list_for_year(self._conn, active.id):
+                self.class_combo.addItem(f"{cls.name}-{cls.section}", cls.id)
+        if previous is not None:
+            idx = self.class_combo.findData(previous)
+            if idx >= 0:
+                self.class_combo.setCurrentIndex(idx)
+        self.class_combo.blockSignals(False)
 
     # ------------------------------------------------------------------
     # Slots

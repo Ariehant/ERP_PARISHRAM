@@ -59,6 +59,12 @@ def _build_students_view(conn: sqlite3.Connection) -> QWidget:
     return StudentsListView(conn)
 
 
+def _build_masters_view(conn: sqlite3.Connection) -> QWidget:
+    from app.ui.views.masters.view import MastersView
+
+    return MastersView(conn)
+
+
 def _placeholder(text: str) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
@@ -122,6 +128,7 @@ class MainWindow(QMainWindow):
         # first time the sidebar entry is selected. Keeps cold start fast.
         self._builders: dict[int, Callable[[sqlite3.Connection], QWidget]] = {
             1: _build_students_view,
+            2: _build_masters_view,
         }
         for i, module in enumerate(_MODULES):
             if module.phase == 1:

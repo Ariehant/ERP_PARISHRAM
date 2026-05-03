@@ -133,6 +133,8 @@ class StudentFormDialog(QDialog):
         self.admission_date.setDate(QDate.currentDate())
         self.status = QComboBox()
         self.status.addItems(student_service.VALID_STATUSES)
+        self.class_combo = QComboBox()
+        self._populate_class_combo()
 
         form.addRow("Admission no. *", self.admission_no)
         form.addRow("Roll no.", self.roll_no)
@@ -142,6 +144,7 @@ class StudentFormDialog(QDialog):
         form.addRow("Gender", self.gender)
         form.addRow("Blood group", self.blood_group)
         form.addRow("Admission date *", self.admission_date)
+        form.addRow("Class", self.class_combo)
         form.addRow("Status", self.status)
         outer.addLayout(form, 1)
         return page
@@ -208,6 +211,10 @@ class StudentFormDialog(QDialog):
             self.blood_group.setCurrentText(s.blood_group)
         if s.admission_date:
             self.admission_date.setDate(QDate.fromString(s.admission_date, "yyyy-MM-dd"))
+        if s.class_id is not None:
+            idx = self.class_combo.findData(s.class_id)
+            if idx >= 0:
+                self.class_combo.setCurrentIndex(idx)
         self.status.setCurrentText(s.status or "active")
         self.father_name.setText(s.father_name or "")
         self.father_phone.setText(s.father_phone or "")
@@ -227,6 +234,18 @@ class StudentFormDialog(QDialog):
         self.religion.setText(s.religion or "")
         if s.photo_path:
             self._render_photo(s.photo_path)
+
+    def _populate_class_combo(self) -> None:
+        """Fill the class dropdown from classes in the active academic year."""
+        from app.repositories import class_repo, school_repo
+
+        self.class_combo.clear()
+        self.class_combo.addItem("(unassigned)", None)
+        active = school_repo.get_active_academic_year(self._conn)
+        if active is None or active.id is None:
+            return
+        for cls in class_repo.list_for_year(self._conn, active.id):
+            self.class_combo.addItem(f"{cls.name}-{cls.section}", cls.id)
 
     # ------------------------------------------------------------------
     def _on_pick_photo(self) -> None:
@@ -278,7 +297,7 @@ class StudentFormDialog(QDialog):
             gender=gender_text,
             blood_group=blood_text,
             photo_path=self._existing_photo_path,
-            class_id=self._student.class_id if self._student else None,
+            class_id=self.class_combo.currentData(),
             admission_date=self.admission_date.date().toString("yyyy-MM-dd"),
             status=self.status.currentText() or "active",
             father_name=self.father_name.text() or None,
