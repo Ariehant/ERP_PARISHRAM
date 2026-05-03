@@ -65,6 +65,12 @@ def _build_masters_view(conn: sqlite3.Connection) -> QWidget:
     return MastersView(conn)
 
 
+def _build_attendance_view(conn: sqlite3.Connection) -> QWidget:
+    from app.ui.views.attendance.view import AttendanceView
+
+    return AttendanceView(conn)
+
+
 def _placeholder(text: str) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
@@ -129,6 +135,7 @@ class MainWindow(QMainWindow):
         self._builders: dict[int, Callable[[sqlite3.Connection], QWidget]] = {
             1: _build_students_view,
             2: _build_masters_view,
+            3: _build_attendance_view,
         }
         for i, module in enumerate(_MODULES):
             if module.phase == 1:
