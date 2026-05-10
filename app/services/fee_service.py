@@ -244,6 +244,16 @@ def collect_payment(
             )
 
     log.info("Collected payment id=%s receipt=%s", payment_id, receipt_no)
+    from app.services import audit_service
+
+    audit_service.record_event(
+        conn,
+        user_id=collected_by,
+        action="create",
+        entity="fee_payments",
+        entity_id=payment_id,
+        details=f"{receipt_no} student={student_id} total_paise={total}",
+    )
     return PaymentResult(payment_id=payment_id, receipt_no=receipt_no)
 
 

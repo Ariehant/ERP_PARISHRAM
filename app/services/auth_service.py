@@ -7,6 +7,7 @@ import sqlite3
 
 from app.models.user import User
 from app.repositories import user_repo
+from app.services import audit_service
 from app.utils.errors import AuthenticationError, ValidationError
 from app.utils.security import verify_password
 
@@ -30,4 +31,12 @@ def authenticate(conn: sqlite3.Connection, username: str, password: str) -> User
         raise AuthenticationError("Invalid username or password.")
 
     log.info("Login OK: %s", user.username)
+    audit_service.record_event(
+        conn,
+        user_id=user.id,
+        action="login",
+        entity="users",
+        entity_id=user.id,
+        details=user.username,
+    )
     return user

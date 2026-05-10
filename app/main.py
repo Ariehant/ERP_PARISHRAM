@@ -79,6 +79,18 @@ def main(argv: list[str] | None = None) -> int:
 
     window = MainWindow(conn, user)
     window.show()
+
+    # Auto-backup on clean shutdown -- the brief asks for one of these on
+    # every successful exit (kept to the most recent 14 in data/backups/).
+    def _on_quit() -> None:
+        try:
+            from app.services import backup_service
+
+            backup_service.auto_backup(conn)
+        except Exception as exc:
+            log.warning("Auto-backup on shutdown failed: %s", exc)
+
+    app.aboutToQuit.connect(_on_quit)
     return app.exec()
 
 
