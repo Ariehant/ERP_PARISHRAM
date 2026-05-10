@@ -77,6 +77,12 @@ def _build_exams_view(conn: sqlite3.Connection) -> QWidget:
     return ExamsView(conn)
 
 
+def _build_fees_view(conn: sqlite3.Connection) -> QWidget:
+    from app.ui.views.fees.view import FeesView
+
+    return FeesView(conn)
+
+
 def _placeholder(text: str) -> QWidget:
     page = QWidget()
     layout = QVBoxLayout(page)
@@ -143,6 +149,7 @@ class MainWindow(QMainWindow):
             2: _build_masters_view,
             3: _build_attendance_view,
             4: _build_exams_view,
+            5: _build_fees_view,
         }
         for i, module in enumerate(_MODULES):
             if module.phase == 1:
