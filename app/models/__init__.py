@@ -10,6 +10,7 @@ from app.models.attendance import Attendance
 from app.models.audit import AuditLog
 from app.models.exam import Exam, Mark
 from app.models.fee import FeePayment, FeePaymentItem, FeeStructure
+from app.models.grade_scale import GradeBand
 from app.models.misc import Document, Remark
 from app.models.people import Staff, Student
 from app.models.school import AcademicYear, School
@@ -26,6 +27,7 @@ __all__ = [
     "FeePayment",
     "FeePaymentItem",
     "FeeStructure",
+    "GradeBand",
     "Mark",
     "Remark",
     "School",
